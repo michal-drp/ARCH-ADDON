@@ -16,16 +16,23 @@ static void Do_UppercaseText ()
 
         for (const API_Neig& neig : selNeigs) {
             API_ElemType type = Neig_To_ElemID (neig.neigID);
-            if (type == API_TextID) {
+            if (type == API_TextID || type == API_LabelID) {
                 API_Element element {};
                 API_Element mask {};
                 API_ElementMemo memo {};
 
-                element.header.type = API_TextID;
+                element.header.type = type;
                 element.header.guid = neig.guid;
 
                 if (ACAPI_Element_Get (&element) == NoError) {
-                    if (ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_TextContent) == NoError) {
+                    bool processText = false;
+                    if (type == API_TextID) {
+                        processText = true;
+                    } else if (type == API_LabelID && element.label.labelClass == APILblClass_Text) {
+                        processText = true;
+                    }
+
+                    if (processText && ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_TextContent) == NoError) {
                         if (memo.textContent != nullptr) {
                             GS::UniString text = *memo.textContent;
                             text = text.ToUpperCase ();
