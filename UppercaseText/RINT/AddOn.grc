@@ -1,0 +1,10 @@
+'STR#' 32000 "Add-on Name and Description" {
+/* [  1] */     "Uppercase Text"
+/* [  2] */     "Converts selected text elements to uppercase."
+}
+
+'STR#' 32500 "Strings for the Menu" {
+/* [   ] */     "Edit"
+/* [   ] */     "Text"
+/* [  1] */     "Convert to Uppercase^E3^ES^EE^EI^ED^EW^EL"
+}

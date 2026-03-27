@@ -1,1 +1,27 @@
 .agent/ecc-install-state.json
+
+# Visual Studio
+.vs/
+*.user
+*.userossc
+*.sln.docstates
+
+# CMake and Builds
+out/
+Build/
+build/
+build_debug/
+build_test/
+CMakeFiles/
+CMakeCache.txt
+CMakeSettings.json.user
+
+# Archicad SDK (usually not committed)
+API.Development.Kit.WIN.29.3100/
+
+# Compiled Add-ons
+*.apx
+*.pdb
+*.ilk
+*.exp
+*.lib
