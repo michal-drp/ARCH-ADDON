@@ -25,24 +25,37 @@ static void Do_UppercaseText ()
                 element.header.guid = neig.guid;
 
                 if (ACAPI_Element_Get (&element) == NoError) {
-                    bool processText = false;
-                    if (type == API_TextID) {
-                        processText = true;
-                    } else if (type == API_LabelID && element.label.labelClass == APILblClass_Text) {
-                        processText = true;
-                    }
 
-                    if (processText && ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_TextContent) == NoError) {
-                        if (memo.textContent != nullptr) {
-                            GS::UniString text = *memo.textContent;
-                            text = text.ToUpperCase ();
-                            delete memo.textContent;
-                            memo.textContent = new GS::UniString (text);
+                    if (type == API_TextID || (type == API_LabelID && element.label.labelClass == APILblClass_Text)) {
+                        if (ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_TextContent) == NoError) {
+                            if (memo.textContent != nullptr) {
+                                GS::UniString text = *memo.textContent;
+                                text = text.ToUpperCase ();
+                                delete memo.textContent;
+                                memo.textContent = new GS::UniString (text);
 
-                            ACAPI_ELEMENT_MASK_CLEAR (mask);
-                            ACAPI_Element_Change (&element, &mask, &memo, APIMemoMask_TextContent, true);
+                                ACAPI_ELEMENT_MASK_CLEAR (mask);
+                                ACAPI_Element_Change (&element, &mask, &memo, APIMemoMask_TextContent, true);
+                            }
+                            ACAPI_DisposeElemMemoHdls (&memo);
                         }
-                        ACAPI_DisposeElemMemoHdls (&memo);
+                    } else if (type == API_LabelID && element.label.labelClass == APILblClass_Symbol) {
+                        if (ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_AddPars) == NoError) {
+                            if (memo.params != nullptr) {
+                                Int32 nPars = (Int32) (BMGetHandleSize ((GSHandle) memo.params) / sizeof (API_AddParType));
+                                API_AddParType* pars = (API_AddParType*) *memo.params;
+                                for (Int32 i = 0; i < nPars; i++) {
+                                    if (pars[i].typeID == APIParT_CString && pars[i].typeMod == API_ParSimple) {
+                                        GS::UniString val (pars[i].value.uStr);
+                                        val = val.ToUpperCase ();
+                                        GS::ucscpy (pars[i].value.uStr, (const GS::uchar_t*) val.ToUStr ());
+                                    }
+                                }
+                                ACAPI_ELEMENT_MASK_CLEAR (mask);
+                                ACAPI_Element_Change (&element, &mask, &memo, APIMemoMask_AddPars, true);
+                            }
+                            ACAPI_DisposeElemMemoHdls (&memo);
+                        }
                     }
                 }
             }
