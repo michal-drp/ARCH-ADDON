@@ -1,10 +1,11 @@
 'STR#' 32000 "Add-on Name and Description" {
-/* [  1] */     "Uppercase Text"
-/* [  2] */     "Converts selected text elements to uppercase."
+/* [  1] */     "MD Tools"
+/* [  2] */     "Set of tools for everyday Archicad workflow."
 }
 
 'STR#' 32500 "Strings for the Menu" {
 /* [   ] */     "Edit"
 /* [   ] */     "Text"
 /* [  1] */     "Convert to Uppercase^E3^ES^EE^EI^ED^EW^EL"
+/* [  2] */     "Break-up Sandwich^E3^ES^EE^EI^ED^EW^EL"
 }

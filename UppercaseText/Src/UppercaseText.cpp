@@ -102,12 +102,88 @@ static void Do_UppercaseText ()
 }
 
 // -----------------------------------------------------------------------------
+// Break-up selected sandwich slabs into basic slabs
+// -----------------------------------------------------------------------------
+static void Do_BreakupSandwich ()
+{
+    ACAPI_CallUndoableCommand ("Break-up Sandwich", [&] () -> GSErrCode {
+        API_SelectionInfo   selectionInfo;
+        GS::Array<API_Neig> selNeigs;
+
+        GSErrCode err = ACAPI_Selection_Get (&selectionInfo, &selNeigs, false);
+        if (err != NoError) return err;
+
+        GS::Array<API_Guid> elementsToDelete;
+
+        for (const API_Neig& neig : selNeigs) {
+            API_ElemType type = Neig_To_ElemID (neig.neigID);
+            if (type != API_SlabID) continue;
+
+            API_Element element {};
+            element.header.guid = neig.guid;
+
+            if (ACAPI_Element_Get (&element) != NoError) continue;
+            if (element.slab.modelElemStructureType != API_CompositeStructure) continue;
+
+            API_Attribute attribute {};
+            attribute.header.typeID = API_CompWallID;
+            attribute.header.index = element.slab.composite;
+            
+            API_AttributeDefExt defs {};
+            if (ACAPI_Attribute_GetDefExt (API_CompWallID, attribute.header.index, &defs) != NoError) continue;
+
+            API_ElementMemo memo {};
+            if (ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_Polygon | APIMemoMask_EdgeTrims) != NoError) {
+                ACAPI_DisposeAttrDefsHdlsExt (&defs);
+                continue;
+            }
+
+            // Calculate current Top Z elevation
+            double currentTopZ = element.slab.level + element.slab.offsetFromTop;
+            
+            if (defs.cwall_compItems != nullptr) {
+                Int32 nComps = (Int32) (BMGetHandleSize ((GSHandle) defs.cwall_compItems) / sizeof (API_CWallComponent));
+                API_CWallComponent* comps = *defs.cwall_compItems;
+
+                for (Int32 i = 0; i < nComps; i++) {
+                    API_Element newSlab = element;
+                    // Reset fields for the new basic slab
+                    newSlab.header.guid = APIGuidFromString ("{00000000-0000-0000-0000-000000000000}");
+                    newSlab.slab.modelElemStructureType = API_BasicStructure;
+                    newSlab.slab.buildingMaterial = comps[i].buildingMaterial;
+                    newSlab.slab.thickness = comps[i].fillThick;
+                    newSlab.slab.referencePlaneLocation = APISlabRefPlane_Top;
+                    newSlab.slab.level = currentTopZ;
+                    newSlab.slab.offsetFromTop = 0.0;
+
+                    ACAPI_Element_Create (&newSlab, &memo);
+                    
+                    // Subtract thickness for the next layer (going down)
+                    currentTopZ -= comps[i].fillThick;
+                }
+                elementsToDelete.Push (element.header.guid);
+            }
+
+            ACAPI_DisposeElemMemoHdls (&memo);
+            ACAPI_DisposeAttrDefsHdlsExt (&defs);
+        }
+
+        if (!elementsToDelete.IsEmpty ()) {
+            ACAPI_Element_Delete (elementsToDelete);
+        }
+
+        return NoError;
+    });
+}
+
+// -----------------------------------------------------------------------------
 // MenuCommandHandler
 // -----------------------------------------------------------------------------
 GSErrCode MenuCommandHandler (const API_MenuParams *params)
 {
     switch (params->menuItemRef.itemIndex) {
         case 1: Do_UppercaseText (); break;
+        case 2: Do_BreakupSandwich (); break;
     }
     return NoError;
 }
@@ -118,7 +194,7 @@ GSErrCode MenuCommandHandler (const API_MenuParams *params)
 API_AddonType CheckEnvironment (API_EnvirParams* envir)
 {
     RSGetIndString (&envir->addOnInfo.name, 32000, 1, ACAPI_GetOwnResModule ());
-    RSGetIndString (&envir->addOnInfo.description, 32000, 2, ACAPI_GetOwnResModule ());
+    envir->addOnInfo.description = GS::UniString ("MD Tools Add-on for Archicad.");
     return APIAddon_Normal;
 }
 
