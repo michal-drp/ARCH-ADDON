@@ -3,6 +3,43 @@
 #include "APICommon.h"
 
 // -----------------------------------------------------------------------------
+// Helper to Uppercase while ignoring <tags> (Autotexts)
+// -----------------------------------------------------------------------------
+static GS::UniString SafeUpperCase (const GS::UniString& input)
+{
+    GS::UniString result;
+    bool inTag = false;
+    UIndex lastStart = 0;
+
+    for (UIndex i = 0; i < input.GetLength (); i++) {
+        if (input[i] == '<' && !inTag) {
+            if (i > lastStart) {
+                GS::UniString part = input.GetSubstring (lastStart, i - lastStart);
+                result += part.ToUpperCase ();
+            }
+            inTag = true;
+            lastStart = i;
+        } else if (input[i] == '>' && inTag) {
+            inTag = false;
+            GS::UniString part = input.GetSubstring (lastStart, i - lastStart + 1);
+            result += part;
+            lastStart = i + 1;
+        }
+    }
+
+    if (lastStart < input.GetLength ()) {
+        GS::UniString part = input.GetSubstring (lastStart, input.GetLength () - lastStart);
+        if (!inTag) {
+            result += part.ToUpperCase ();
+        } else {
+            result += part;
+        }
+    }
+
+    return result;
+}
+
+// -----------------------------------------------------------------------------
 // Uppercase selected text
 // -----------------------------------------------------------------------------
 static void Do_UppercaseText ()
@@ -30,7 +67,7 @@ static void Do_UppercaseText ()
                         if (ACAPI_Element_GetMemo (element.header.guid, &memo, APIMemoMask_TextContent) == NoError) {
                             if (memo.textContent != nullptr) {
                                 GS::UniString text = *memo.textContent;
-                                text = text.ToUpperCase ();
+                                text = SafeUpperCase (text);
                                 delete memo.textContent;
                                 memo.textContent = new GS::UniString (text);
 
@@ -47,7 +84,7 @@ static void Do_UppercaseText ()
                                 for (Int32 i = 0; i < nPars; i++) {
                                     if (pars[i].typeID == APIParT_CString && pars[i].typeMod == API_ParSimple) {
                                         GS::UniString val (pars[i].value.uStr);
-                                        val = val.ToUpperCase ();
+                                        val = SafeUpperCase (val);
                                         GS::ucscpy (pars[i].value.uStr, (const GS::uchar_t*) val.ToUStr ());
                                     }
                                 }
